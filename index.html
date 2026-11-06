@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rail To-Do</title>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--ink:#1b2430;--mute:#677385;--line:#dde2e8;--rail:#b6bfca;--green:#1e8a5a;--red:#c8442f;--amber:#c98a00;--blue:#2563c9;--btn:#fff}
+@media (prefers-color-scheme:dark){:root{--bg:#10141a;--card:#1a2029;--ink:#e8edf3;--mute:#93a0b1;--line:#2b3441;--rail:#4a5565;--green:#4ec18b;--red:#ef7e6b;--amber:#f0b429;--blue:#6ea0ff;--btn:#222a35}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:720px;margin:0 auto;padding:20px 16px 56px}
+h1{font-size:1.5rem;margin:0 0 2px}
+.sub{margin:0 0 16px;color:var(--mute)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+input,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px;width:100%}
+input:focus,textarea:focus,button:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+label{display:flex;flex-direction:column;gap:4px;font-size:.88rem;color:var(--mute)}
+button{font:inherit;font-size:.9rem;cursor:pointer;border-radius:6px;padding:6px 12px;border:1px solid var(--line);background:var(--btn);color:var(--ink)}
+button.primary{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600}
+button.ok{color:var(--green);border-color:var(--green)}button.no{color:var(--red);border-color:var(--red)}
+button:disabled{opacity:.6}
+.row{display:grid;grid-template-columns:1fr 170px;gap:10px;margin-bottom:10px}
+@media(max-width:520px){.row{grid-template-columns:1fr}}
+.msg{font-size:.9rem;min-height:1.3em;margin:8px 0 0;color:var(--mute)}.msg.err{color:var(--red)}.msg.good{color:var(--green)}
+/* departure board */
+.board{background:#0f1418;color:#ffb000;border-radius:12px;padding:14px 16px;margin-bottom:16px;font-family:ui-monospace,Menlo,Consolas,monospace}
+.board h2{margin:0 0 8px;font-size:.85rem;letter-spacing:.14em;color:#8fa0ad;font-weight:600}
+.bd{display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid #243038;flex-wrap:wrap}
+.bd .tag{font-size:.72rem;padding:1px 7px;border-radius:4px;background:#ffb000;color:#0f1418;font-weight:700}
+.bd .tag.late{background:#ff6a55}
+.bd .t{flex:1 1 160px;min-width:0;overflow-wrap:anywhere}
+.bd button{background:#1a2329;border-color:#34444e;color:#e8edf3}
+.board .clear{color:#7be0a8;padding:6px 0}
+.next{margin-top:8px;font-size:.82rem;color:#8fa0ad}
+/* track */
+ol.track{list-style:none;margin:0;padding:0}
+li.stop{position:relative;padding:0 0 20px 54px;min-height:46px}
+li.stop::before{content:"";position:absolute;left:18px;top:30px;bottom:-2px;border-left:4px dashed var(--rail)}
+li.stop:last-child::before{display:none}
+li.stop.done::before,li.stop.notdone::before,li.stop.late::before,li.stop.here::before{border-left-style:solid}
+li.done::before{border-color:var(--green)}li.notdone::before{border-color:var(--red)}li.late::before{border-color:var(--amber)}li.here::before{border-color:var(--blue)}
+.dot{position:absolute;left:7px;top:3px;width:26px;height:26px;border-radius:50%;border:3px solid var(--rail);background:var(--card);display:grid;place-items:center;font-size:.78rem;font-weight:700;line-height:1}
+li.done .dot{background:var(--green);border-color:var(--green);color:#fff}
+li.notdone .dot{background:var(--red);border-color:var(--red);color:#fff}
+li.late .dot{border-color:var(--amber);color:var(--amber)}
+li.today .dot{border-color:var(--blue);color:var(--blue);animation:pulse 1.8s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(37,99,201,.5)}100%{box-shadow:0 0 0 10px rgba(37,99,201,0)}}
+@media(prefers-reduced-motion:reduce){li.today .dot{animation:none}}
+li.here .dot{width:34px;height:34px;left:3px;top:-2px;border-color:var(--blue);font-size:1.15rem}
+li.here .hd{display:inline-block;background:var(--blue);color:#fff;border-radius:999px;padding:2px 12px;font-size:.82rem;font-weight:600;margin-top:2px}
+.when{font-size:.78rem;color:var(--mute);font-family:ui-monospace,Menlo,Consolas,monospace;text-transform:uppercase;letter-spacing:.04em}
+.ttl{font-weight:600;overflow-wrap:anywhere}
+li.done .ttl{text-decoration:line-through;color:var(--mute)}
+.note{font-size:.88rem;color:var(--mute);overflow-wrap:anywhere}
+.btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.status{font-size:.8rem;font-weight:600}
+li.done .status{color:var(--green)}li.notdone .status{color:var(--red)}li.late .status{color:var(--amber)}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.top h2{margin:0;font-size:1.05rem}
+.small{font-size:.85rem;color:var(--mute)}
+#lock{display:none}
+</style>
+</head>
+<body>
+<main>
+  <h1>🚆 Rail To-Do</h1>
+  <p class="sub">Plan tasks on future dates. Each task is a station on your line.</p>
+
+  <section class="card" id="lock">
+    <form id="lf">
+      <label>Password <input type="password" id="pw" autocomplete="current-password" required></label>
+      <p style="margin:12px 0 0"><button class="primary" type="submit">Unlock</button></p>
+    </form>
+    <p class="msg err" id="lmsg"></p>
+  </section>
+
+  <div id="app" style="display:none">
+    <section class="board" aria-live="polite">
+      <h2>TODAY'S DEPARTURES · <span id="todayLabel"></span></h2>
+      <div id="bd"></div>
+      <div class="next" id="next"></div>
+    </section>
+
+    <section class="card">
+      <form id="f">
+        <div class="row">
+          <label>New task <input id="title" required maxlength="200" placeholder="What needs to be done?"></label>
+          <label>Date <input type="date" id="date" required></label>
+        </div>
+        <label>Note (optional) <textarea id="note" rows="2" maxlength="500"></textarea></label>
+        <p style="margin:12px 0 0;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="primary" type="submit" id="add">Add station</button>
+          <button type="button" id="lockbtn">Lock</button>
+        </p>
+      </form>
+      <p class="msg" id="msg"></p>
+    </section>
+
+    <section class="card">
+      <div class="top">
+        <h2>Your line</h2>
+        <button id="earlier" style="display:none"></button>
+      </div>
+      <ol class="track" id="track"></ol>
+      <p class="small" id="empty">No stations yet. Add your first task above.</p>
+    </section>
+
+    <section class="card small">
+      <strong>Reminders</strong>
+      <p style="margin:6px 0">Every time you open this page, the board above shows what is due today and what is delayed.</p>
+      <p style="margin:6px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button id="notif">Enable notifications</button>
+        <label style="flex-direction:row;align-items:center;gap:6px">Remind me at <input type="time" id="rtime" style="width:auto"></label>
+      </p>
+      <p style="margin:6px 0">Notifications only fire while this page is open in a browser tab or an installed web app.</p>
+    </section>
+  </div>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2, "0");
+const ymd = d => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+const todayStr = () => ymd(new Date());
+const dayDiff = (a, b) => Math.round((new Date(a + "T00:00") - new Date(b + "T00:00")) / 864e5);
+const pretty = d => new Date(d + "T00:00").toLocaleDateString(undefined, {weekday: "short", day: "numeric", month: "short"});
+function store(k, v) { try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} }
+function recall(k) { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } }
+function say(t, cls) { $("msg").textContent = t; $("msg").className = "msg " + (cls || ""); }
+
+let pw = "", tasks = [], showAll = false;
+
+async function api(method, path, body) {
+  const r = await fetch("/api/entries" + (path || ""), {
+    method, headers: {"Content-Type": "application/json", "x-password": pw},
+    body: body ? JSON.stringify(body) : undefined
+  });
+  let j = {}; try { j = await r.json(); } catch (e) {}
+  if (!r.ok) { const e = new Error(j.error || "Request failed (" + r.status + ")."); e.status = r.status; throw e; }
+  return j;
+}
+async function act(fn, okMsg) {
+  try { await fn(); await refresh(); if (okMsg) say(okMsg, "good"); }
+  catch (e) { if (e.status === 401) showLock(e.message); else say(e.message, "err"); }
+}
+const setStatus = (t, s) => act(() => api("PATCH", "?id=" + encodeURIComponent(t.id), {status: s}));
+const remove = t => { if (confirm("Remove this station?")) act(() => api("DELETE", "?id=" + encodeURIComponent(t.id)), "Station removed."); };
+
+function btn(label, cls, fn) {
+  const b = document.createElement("button"); b.textContent = label; if (cls) b.className = cls; b.onclick = fn; return b;
+}
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
+
+function render() {
+  const today = todayStr();
+  $("todayLabel").textContent = pretty(today).toUpperCase();
+
+  /* departure board */
+  const bd = $("bd"); bd.innerHTML = "";
+  const late = tasks.filter(t => t.status === "pending" && t.date < today);
+  const due = tasks.filter(t => t.status === "pending" && t.date === today);
+  [...late, ...due].forEach(t => {
+    const row = el("div", "bd");
+    const isLate = t.date < today;
+    row.append(el("span", "tag" + (isLate ? " late" : ""), isLate ? "DELAYED" : "TODAY"));
+    row.append(el("span", "t", t.title + (isLate ? "  (" + pretty(t.date) + ")" : "")));
+    row.append(btn("Done", "", () => setStatus(t, "done")), btn("Not done", "", () => setStatus(t, "notdone")));
+    bd.append(row);
+  });
+  if (!late.length && !due.length) bd.append(el("div", "clear", "✔ No departures waiting. All clear."));
+  const nxt = tasks.find(t => t.status === "pending" && t.date > today);
+  $("next").textContent = nxt ? "Next stop: " + nxt.title + " · " + (dayDiff(nxt.date, today) === 1 ? "tomorrow" : "in " + dayDiff(nxt.date, today) + " days") : "";
+  const count = late.length + due.length;
+  document.title = (count ? "(" + count + ") " : "") + "Rail To-Do";
+
+  /* track */
+  const ol = $("track"); ol.innerHTML = "";
+  const hiddenBefore = ymd(new Date(Date.now() - 14 * 864e5));
+  const hiddenCount = tasks.filter(t => t.date < hiddenBefore).length;
+  $("earlier").style.display = hiddenCount ? "" : "none";
+  $("earlier").textContent = showAll ? "Hide earlier stops" : "Show " + hiddenCount + " earlier stop" + (hiddenCount > 1 ? "s" : "");
+  $("empty").style.display = tasks.length ? "none" : "";
+
+  let markerDone = false;
+  const marker = () => {
+    const li = el("li", "stop here");
+    li.append(el("span", "dot", "🚆"));
+    li.append(el("span", "hd", "You are here · " + pretty(today)));
+    ol.append(li); markerDone = true;
+  };
+  tasks.forEach(t => {
+    if (!showAll && t.date < hiddenBefore) return;
+    if (!markerDone && t.date >= today) marker();
+    const isLate = t.status === "pending" && t.date < today;
+    const isToday = t.status === "pending" && t.date === today;
+    const li = el("li", "stop " + (t.status === "done" ? "done" : t.status === "notdone" ? "notdone" : isLate ? "late" : isToday ? "today" : "future"));
+    li.append(el("span", "dot", t.status === "done" ? "✓" : t.status === "notdone" ? "✕" : isLate ? "!" : isToday ? "●" : ""));
+    li.append(el("div", "when", pretty(t.date)));
+    li.append(el("div", "ttl", t.title));
+    if (t.note) li.append(el("div", "note", t.note));
+    const b = el("div", "btns");
+    if (t.status === "done") b.append(el("span", "status", "Done"));
+    else if (t.status === "notdone") b.append(el("span", "status", "Not done"));
+    else if (isLate) b.append(el("span", "status", "Delayed – did you do it?"));
+    if (t.status === "pending" && t.date <= today) b.append(btn("Done", "ok", () => setStatus(t, "done")), btn("Not done", "no", () => setStatus(t, "notdone")));
+    if (t.status !== "pending") b.append(btn("Undo", "", () => setStatus(t, "pending")));
+    b.append(btn("Remove", "", () => remove(t)));
+    li.append(b); ol.append(li);
+  });
+  if (!markerDone && tasks.length) marker();
+  checkNotify();
+}
+
+async function refresh() { tasks = await api("GET"); render(); }
+
+function showLock(msg) {
+  $("app").style.display = "none"; $("lock").style.display = "block";
+  $("lmsg").textContent = msg || ""; $("pw").value = ""; $("pw").focus();
+}
+async function unlock(p) {
+  pw = p;
+  try { await refresh(); store("rail_pw", p); $("lock").style.display = "none"; $("app").style.display = "block"; }
+  catch (e) { store("rail_pw", null); showLock(e.message); }
+}
+$("lf").addEventListener("submit", e => { e.preventDefault(); unlock($("pw").value); });
+$("lockbtn").onclick = () => { store("rail_pw", null); pw = ""; showLock(""); };
+$("earlier").onclick = () => { showAll = !showAll; render(); };
+
+$("f").addEventListener("submit", async e => {
+  e.preventDefault();
+  const b = $("add"); b.disabled = true; say("Saving…");
+  await act(() => api("POST", "", {title: $("title").value, date: $("date").value, note: $("note").value}), "Station added.");
+  $("title").value = ""; $("note").value = ""; b.disabled = false; $("title").focus();
+});
+
+/* reminders (while the page is open) */
+function checkNotify() {
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  const today = todayStr(), now = new Date();
+  if (recall("rail_notified") === today) return;
+  if (pad(now.getHours()) + ":" + pad(now.getMinutes()) < ($("rtime").value || "08:00")) return;
+  const open = tasks.filter(t => t.status === "pending" && t.date <= today);
+  if (!open.length) return;
+  new Notification("Today's departures", {body: open.slice(0, 4).map(t => t.title).join(" · ") + (open.length > 4 ? " …" : "")});
+  store("rail_notified", today);
+}
+$("notif").onclick = async () => {
+  if (!("Notification" in window)) { say("This browser does not support notifications.", "err"); return; }
+  const p = await Notification.requestPermission();
+  say(p === "granted" ? "Notifications enabled." : "Notifications are blocked in your browser settings.", p === "granted" ? "good" : "err");
+  checkNotify();
+};
+$("rtime").value = recall("rail_rtime") || "08:00";
+$("rtime").onchange = () => { store("rail_rtime", $("rtime").value); store("rail_notified", null); checkNotify(); };
+setInterval(() => { if (pw) { if (todayStr() !== $("date").dataset.d) { $("date").dataset.d = todayStr(); } render(); } }, 60000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden && pw) refresh().catch(() => {}); });
+
+$("date").value = todayStr(); $("date").dataset.d = todayStr();
+const saved = recall("rail_pw");
+if (saved) unlock(saved); else showLock("");
+</script>
+</body>
+</html>
